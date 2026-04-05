@@ -12,7 +12,7 @@ export default function Home() {
 
   return (
     <main className="flex h-screen flex-col items-center justify-center gap-6">
-      <h1 className="text-3xl font-bold">寄付アプリ</h1>
+      <h1 className="text-3xl font-bold">ゆどうふ寄付アプリ</h1>
 
       <button
         onClick={handleDonate}
