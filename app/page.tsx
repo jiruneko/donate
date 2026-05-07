@@ -18,7 +18,7 @@ export default function Home() {
         onClick={handleDonate}
         className="bg-black text-white px-6 py-3 rounded"
       >
-        10000円寄付する
+        1000円寄付する
       </button>
     </main>
   );
