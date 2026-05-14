@@ -2,13 +2,17 @@ import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
+const BASE_URL =
+  process.env.NODE_ENV === "production"
+    ? "https://donate-weld-three.vercel.app"
+    : "http://localhost:3000";
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
 
     const amount = Number(body.amount);
 
-    // 金額チェック
     if (
       isNaN(amount) ||
       amount < 500 ||
@@ -19,9 +23,6 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-
-    // 現在のURLを自動取得
-    const origin = req.headers.get("origin");
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
@@ -44,12 +45,11 @@ export async function POST(req: Request) {
 
       mode: "payment",
 
-      // 決済成功
-      success_url: `${origin}/success?amount=${amount}`,
+      success_url:
+        `${BASE_URL}/success?amount=${amount}`,
 
-      // ← ここ超重要
-      // キャンセル時はトップへ戻す
-      cancel_url: `${origin}`,
+      cancel_url:
+        `${BASE_URL}`,
     });
 
     return Response.json({
