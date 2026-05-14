@@ -1,31 +1,63 @@
 import Stripe from "stripe";
-import { NextResponse } from "next/server";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
-export async function POST() {
+export async function POST(req: Request) {
   try {
+    const body = await req.json();
+
+    const amount = Number(body.amount);
+
+    // サーバー側でも必ずチェック
+    if (
+      isNaN(amount) ||
+      amount < 500 ||
+      amount > 100000
+    ) {
+      return Response.json(
+        { error: "Invalid amount" },
+        { status: 400 }
+      );
+    }
+
     const session = await stripe.checkout.sessions.create({
-      mode: "payment",
+      payment_method_types: ["card"],
+
       line_items: [
         {
           price_data: {
             currency: "jpy",
+
             product_data: {
-              name: "寄付",
+              name: "ゆどうふへの寄付",
             },
-            unit_amount: 1000,
+
+            unit_amount: amount,
           },
+
           quantity: 1,
         },
       ],
-      success_url: "http://localhost:3000/success",
-      cancel_url: "http://localhost:3000/cancel",
+
+      mode: "payment",
+
+      success_url:
+        `http://localhost:3000/success?amount=${amount}`,
+
+      // ← 戻るとトップページへ戻る
+      cancel_url:
+        "http://localhost:3000",
     });
 
-    return NextResponse.json({ url: session.url });
+    return Response.json({
+      url: session.url,
+    });
   } catch (err) {
-    console.error(err); // ←これ追加
-    return NextResponse.json({ error: "Stripe Error" }, { status: 500 });
+    console.error(err);
+
+    return Response.json(
+      { error: "Stripe Error" },
+      { status: 500 }
+    );
   }
 }
