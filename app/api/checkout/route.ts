@@ -8,7 +8,7 @@ export async function POST(req: Request) {
 
     const amount = Number(body.amount);
 
-    // サーバー側でも必ずチェック
+    // 金額チェック
     if (
       isNaN(amount) ||
       amount < 500 ||
@@ -19,6 +19,9 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
+
+    // 現在のURLを自動取得
+    const origin = req.headers.get("origin");
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
@@ -41,12 +44,12 @@ export async function POST(req: Request) {
 
       mode: "payment",
 
-      success_url:
-        `http://localhost:3000/success?amount=${amount}`,
+      // 決済成功
+      success_url: `${origin}/success?amount=${amount}`,
 
-      // ← 戻るとトップページへ戻る
-      cancel_url:
-        "http://localhost:3000",
+      // ← ここ超重要
+      // キャンセル時はトップへ戻す
+      cancel_url: `${origin}`,
     });
 
     return Response.json({
