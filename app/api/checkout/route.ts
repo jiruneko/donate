@@ -1,6 +1,13 @@
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+const stripe = new Stripe(
+  process.env.STRIPE_SECRET_KEY!
+);
+
+const BASE_URL =
+  process.env.NODE_ENV === "production"
+    ? "https://donate-weld-three.vercel.app"
+    : "http://localhost:3000";
 
 export async function POST(req: Request) {
   try {
@@ -8,56 +15,79 @@ export async function POST(req: Request) {
 
     const amount = Number(body.amount);
 
-    // サーバー側でも必ずチェック
+    // 金額チェック
     if (
       isNaN(amount) ||
       amount < 500 ||
       amount > 100000
     ) {
       return Response.json(
-        { error: "Invalid amount" },
-        { status: 400 }
+        {
+          error:
+            "寄付金額は500円〜100000円で入力してください",
+        },
+        {
+          status: 400,
+        }
       );
     }
 
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
+    // Stripe Checkout Session 作成
+    const session =
+      await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
 
-      line_items: [
-        {
-          price_data: {
-            currency: "jpy",
+        line_items: [
+          {
+            price_data: {
+              currency: "jpy",
 
-            product_data: {
-              name: "ゆどうふへの寄付",
+              product_data: {
+                name: "ゆどうふへの寄付",
+                description:
+                  "ご支援ありがとうございます",
+              },
+
+              unit_amount: amount,
             },
 
-            unit_amount: amount,
+            quantity: 1,
           },
+        ],
 
-          quantity: 1,
-        },
-      ],
+        mode: "payment",
 
-      mode: "payment",
+        // 決済成功後
+        success_url:
+          `${BASE_URL}/success?amount=${amount}`,
 
-      success_url:
-        `http://localhost:3000/success?amount=${amount}`,
+        // ← 戻るボタン時
+        cancel_url:
+          `${BASE_URL}/`,
 
-      // ← 戻るとトップページへ戻る
-      cancel_url:
-        "http://localhost:3000",
-    });
+        billing_address_collection:
+          "auto",
+
+        allow_promotion_codes: false,
+      });
 
     return Response.json({
       url: session.url,
     });
-  } catch (err) {
-    console.error(err);
+  } catch (error) {
+    console.error(
+      "Stripe Checkout Error:",
+      error
+    );
 
     return Response.json(
-      { error: "Stripe Error" },
-      { status: 500 }
+      {
+        error:
+          "Stripe決済の作成に失敗しました",
+      },
+      {
+        status: 500,
+      }
     );
   }
 }
